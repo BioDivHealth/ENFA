@@ -1,0 +1,250 @@
+---
+title: |
+  |Environmental Niche Factor Analysis
+  | Species niche analysis and suitability maps
+author: "Gonzalo Albaladejo-Robles"
+date: "27/02/2025"
+output:
+  html_document: default
+---
+
+#### Project options
+
+```{r Options, echo=T, include=F}
+rm(list=ls())
+gc()
+#.rs.restartR()
+setwd(dirname(rstudioapi::getSourceEditorContext()$path)) # Set the working directory to the 
+
+# directory in which the code is stored
+td<-tempdir()
+dir.create(td,showWarnings = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+#### Set up the working environment
+
+-   Load the compatible packages versions
+
+```{r Setup environment, echo=T, include=FALSE}
+# 0. Load the needed packages needed ----
+list.of.packages<-c("dplyr","sf","data.table","terra","tidyr")
+
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+lapply(list.of.packages,require,character.only=TRUE)
+rm(list.of.packages,new.packages)
+
+```
+
+-   Load the functions for the analysis
+
+```{r echo = T, include = F}
+# 0.1 Load the functions to run the analysis ----
+  functions<-"./Functions" %>% list.files(recursive = FALSE,pattern = ".R$",full.names = TRUE)
+  lapply(functions,function(x) source(x))
+
+```
+
+# Environmental Niche Factor Analysis (ENFA)
+
+ENFA is a presence only method that analyze the multidimensional space form by the environmental information and the presence data to calculate the centroid of the species niche, the distance between that centroid and the rest of the environment (marginality). Base on this distance we can then calculate the species suitability to the environment (the combination of our multidimensional space).
+
+### Load the species spatial data
+
+-   Species records
+
+```{r Species records, message=F,warning=F,echo=T}
+# a. Species points----
+  sf_use_s2(FALSE)
+  Species_list <- list.files("./Data/Sp_info/Records",pattern = "Microtus subterraneus.csv",full.names = TRUE)
+  presence_dat <- Species_list %>% read.csv()
+  
+  Sp_points <- presence_dat %>%   st_as_sf(coords=c("decimalLongitude","decimalLatitude"))
+  Sp_points[,c(1:5)] %>% head()
+  
+```  
+
+-   Species ranges
+
+```{r SPecies ranges, message=F,warning=F,echo=T}
+# b. Species spatial information----
+  IUCN_ranges <- "./Data/Sp_info/Ranges/Sp_ranges.shp" %>% st_read()
+
+# b.1 Analysis study area----
+  "./Data/Study_area" %>% dir.create(showWarnings = F,recursive = T)
+  worldPol <- geodata::world(resolution = 5,path="./Data/Study_area") %>%   st_as_sf() %>% st_make_valid()
+```
+
+- Configure the study area: the Environmental Niche Factor Analysis is based on the analysis of the multidimensional space form by the combination of environmental information covered by the species and that of our region of study. Therefore the distribution and size of our study area have an impact on the final results of the ENFA analysis.
+  We are going to select all the countries that are in reach of our species range as our study area. To account for spatial bias on the configuration of the IUCN range data, we are going to add a buffer of 100 km (~ 1 degree) around it.
+
+```{r configure the study area, echo=T, include=F, warning=F, message=F}
+  # Select the country geometries that overlap/intersect with the species range
+  c_area <- st_crop(worldPol,IUCN_ranges %>% st_union() %>% st_buffer(d=3) %>% st_bbox() %>% st_as_sfc() ,sparse=F)
+  
+  sty_area_united <- c_area %>% st_union()
+  sty_area <- c_area
+  
+  rm(c_area)
+  
+```
+
+```{r plot the study area selection process, echo=F,include=T,warning=F,message=F}
+plot(sty_area_united,col="grey88")
+plot(IUCN_ranges %>% st_geometry(),col="tomato",add=T)
+lines(sty_area)
+
+legend("left",legend=c("Species range","Total area"),col=c("tomato","grey88"),pch=15,bty="n",title=Sp_points$species %>% unique(),title.cex = 0.75,cex=0.6,pt.cex = 1.5)
+mtext(side=3,adj=0,"Study area for the ENFA",font=2)
+
+
+```
+
+- Load the environmental data
+
+```{r Environmental information, echo=T, message=F,warning=F}
+# c. Get the environmental information----
+  "./Data/Env_vars" %>% dir.create(showWarnings = F,recursive = T)
+  bio_w <- geodata::worldclim_global(var="bio",res=2.5,path=tempdir())
+  writeRaster(bio_w,paste("./Data/Env_vars","wordClim.tif",sep="/"),overwrite=T)
+  
+  bio_w <- rast(paste("./Data/Env_vars","wordClim.tif",sep="/"))
+  bio_sty <- crop(bio_w,sty_area %>% st_union() %>% vect())
+```
+
+- Clean the records
+
+```{r Remove points outside range, echo=T,message=F,warning=F}
+# d. Remove points outside the IUCN range of the species----  
+  st_crs(Sp_points) <- st_crs(bio_w)
+  Sp_points <- Sp_points %>% st_transform(crs=st_crs(bio_w)) 
+  
+  p_index <- st_intersects(Sp_points,IUCN_ranges %>% st_union(),sparse=F)
+  Sp_points <- Sp_points[p_index,]
+  
+```
+
+- Check the spatial data
+
+```{r env_data, echo=FALSE}
+par(mar=c(0,0,0,0))
+plot(bio_sty[[c(1:3,21:23)]],axes=F)
+
+```
+
+-  Check the species spatial data
+
+```{r plot the sampling area,include=T}
+par(mar=c(0,0,0,0))
+# display the information
+  plot(sty_area %>% st_geometry(),col="grey95")
+  plot(IUCN_ranges %>% st_geometry(),add=T,col="grey" %>% adjustcolor(alpha.f = 0.75))
+  plot(sty_area_united %>% st_geometry(),border="black",lty=3,add=T)
+  
+  plot(Sp_points %>% st_geometry(),pch=19,col="gold1",cex=0.8,add=T)
+  
+  legend("left",legend=c("Spp range","Sampling area","Presence"),
+         pch=15,col=c("grey","black","gold1"),bty="n",xpd=T,cex=0.75)
+```
+
+# b. extract the data for the presence data
+
+```{r Prepare the observation index, echo=T,include=F}
+# Create a dataset containing the index of presence points (1) and background environmental information (0)
+ pres_index <- rep(0,times=terra::ncell(bio_sty$wc2.1_2.5m_bio_1))
+
+  # Index of presence records
+  obs <- terra::extract(x=bio_sty$wc2.1_2.5m_bio_1, y=Sp_points %>% vect(), cells=T)$cell 
+  
+  pres_index[obs]<-1
+
+  # Index of missing data
+  index_missing <- !is.na(bio_sty$wc2.1_2.5m_bio_1 %>% terra::values()) %>% as.vector()
+  obs_index <- pres_index[index_missing] # Remove cells with NA values
+
+  # Prepare environmental data
+  env_dat <- bio_sty %>% terra::as.data.frame()
+  env_dat[index_missing,]
+```
+
+# c. Run the ENFA analysis
+
+```{r}
+  ENFA.r <- ENFA_function(data = env_dat,presence_index = obs_index)
+  # ENFA.r
+
+```
+
+- Transform the results into rasters
+
+```{r transform ENFA}
+# Transform the ENFA_results into rasters for the export
+  empty_rast <- bio_sty$wc2.1_2.5m_bio_1 ; empty_rast[!is.na(empty_rast)] <- NA
+
+# Get the different ENFA values
+  # Mahalanobis distance
+  maha <- empty_rast
+  maha[index_missing] <- ENFA.r$prediction
+  
+  # Marginality
+  Marginality <- empty_rast
+  Marginality[index_missing] <- ENFA.r$marginality_specificity_vals$Marginality
+  
+  # Specialization
+  Specialization <- empty_rast
+  Specialization[index_missing] <- ENFA.r$marginality_specificity_vals$Specialization1
+
+  # Suitability
+  Suitability <- empty_rast
+  Suitability[index_missing] <- ENFA.r$Suitability
+
+  ENFA_rast <- c(maha,Marginality,Specialization, Suitability) ; names(ENFA_rast) <- c("Mahalanobis_dist","Marginality","Specificity", "Suitability")
+```
+
+## d. Main ENFA parameters
+
+- Niche centroid
+
+```{r ENFA results1}
+# c. Exploratory analysis of the species niche
+  ENFA.r$niche_centroid_coordinates
+
+```
+
+Marginality loadings for the variables
+
+```{r ENFA results2}
+  ENFA.r$marginality_coordiantes # Marginality coordinates
+
+```
+
+# e. Get the extra parameters from the ENFA analysis and calculate niche suitability
+
+```{r display the results}
+# b. Get the rest of the ENFA parameters----
+  par(mfrow=c(1,2))
+  ENFA_extra<- plot_enfa(mar=ENFA.r$marginality_specificity_vals$Marginality, # Marginality vector
+                       spc=ENFA.r$marginality_specificity_vals$Specialization1, # Specialization vector
+                       m=ENFA.r$niche_centroid_coordinates, # Niche centroid
+                       sp_rec=obs_index, # Species records index
+                       plot_sp=T, # should we plot the results
+                       pts=FALSE)
+  
+# c. display the results and calculate the niche suitability  
+  plot(ENFA_rast$Mahalanobis_dist %>% log1p(),col=viridis::inferno(n=200) %>% rev(),axes=F,main="Distance to\nniche centroid",cex=0.75)
+  plot(sty_area_united %>% st_geometry(),add=T)
+  plot(IUCN_ranges %>% st_geometry(),border="white",lty=4,add=T)
+  
+```
+
+```{r ENFA rast, echo=FALSE}
+layout(matrix(c(1,2,3,4),nrow=2,ncol=2))
+plot(ENFA_rast$Mahalanobis_dist %>% log1p(),col=viridis::inferno(n=200) %>% rev(),axes=F,main="Niche distance")
+plot(ENFA_rast$Marginality,col=viridis::mako(n=200) %>% rev(),axes=F,main="Marginality")
+plot(ENFA_rast$Specificity,col=viridis::viridis(n=200) %>% rev(),axes=F,main="Specificity")
+plot(ENFA_rast$Suitability,col=viridis::turbo(n=200),axes=F,main="Suitability")
+
+```
