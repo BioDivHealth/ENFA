@@ -8,7 +8,7 @@ output:
   html_document: default
 ---
 
-# Environmental Niche Factor Analysis (ENFA)
+## Environmental Niche Factor Analysis (ENFA)
 
 ENFA is a presence only method that analyze the multidimensional space form by the environmental information present in our study area of region of interest. The method compares the overall distribution of the multivariate space against that form only by the fraction of such space occupied by the species (presence data). Once both the shape of the environment and that of the species is define the centroid of the later one is defined. This niche centroid is then use to calculate the distance, in the multidimensional space, between the species niche and the rest of the environment. This is the Mahalanobis distance. Along with the distance of the environmental conditions to those of the species niche, other metrics are also calculated:
 
