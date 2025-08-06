@@ -1,3 +1,5 @@
+![Header](Logo/path6.png)
+
 # Environmental Niche Factor Analysis (ENFA)
 
 **Environmental Niche Factor Analysis (ENFA)** is a powerful statistical method used in ecology and conservation biology to model species distributions using **presence-only data**. Unlike traditional methods that require both presence and absence data, ENFA leverages environmental variables to characterize the ecological niche of a species and assess habitat suitability across a landscape.
