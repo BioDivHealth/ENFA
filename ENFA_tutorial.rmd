@@ -1,16 +1,28 @@
 ---
 title: |
-  |Environmental Niche Factor Analysis
-  | Species niche analysis and suitability maps
+  Environmental Niche Factor Analysis
+   - Species niche analysis and suitability maps
 author: "Gonzalo Albaladejo-Robles"
-date: "27/02/2025"
+date: "31/07/2025"
 output:
   html_document: default
 ---
 
-#### Project options
+# Environmental Niche Factor Analysis (ENFA)
 
-```{r Options, echo=T, include=F}
+ENFA is a presence only method that analyze the multidimensional space form by the environmental information present in our study area of region of interest. The method compares the overall distribution of the multivariate space against that form only by the fraction of such space occupied by the species (presence data). Once both the shape of the environment and that of the species is define the centroid of the later one is defined. This niche centroid is then use to calculate the distance, in the multidimensional space, between the species niche and the rest of the environment. This is the Mahalanobis distance. Along with the distance of the environmental conditions to those of the species niche, other metrics are also calculated:
+
+-   Marginality: The difference between the mean environmental conditions of the species and the global mean.
+
+-   Specialization: The ratio of variance in the global environment to the variance in the species environment.
+
+Base on this distance we can describe the overall level of species niche spatial cover, specialization, and overall habitat suitability.
+
+## Run the analysis using the `ENFA_function`
+
+### a. Prepare the working environment
+
+```{r General project Options, echo=F, include=F}
 rm(list=ls())
 gc()
 #.rs.restartR()
@@ -23,13 +35,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
-#### Set up the working environment
+-   Load some basic libraries for spatial data processing
 
--   Load the compatible packages versions
-
-```{r Setup environment, echo=T, include=FALSE}
+```{r Setup the working environment environment, echo=T,message=F,warning=F,results='hide'}
 # 0. Load the needed packages needed ----
-list.of.packages<-c("dplyr","sf","data.table","terra","tidyr")
+list.of.packages<-c("dplyr","sf","data.table","terra","tidyr","geodata","viridis")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
@@ -41,33 +51,35 @@ rm(list.of.packages,new.packages)
 
 -   Load the functions for the analysis
 
-```{r echo = T, include = F}
+```{r Load the function to run the analysis,echo = T,results='hide'}
 # 0.1 Load the functions to run the analysis ----
   functions<-"./Functions" %>% list.files(recursive = FALSE,pattern = ".R$",full.names = TRUE)
   lapply(functions,function(x) source(x))
 
 ```
 
-# Environmental Niche Factor Analysis (ENFA)
-
-ENFA is a presence only method that analyze the multidimensional space form by the environmental information and the presence data to calculate the centroid of the species niche, the distance between that centroid and the rest of the environment (marginality). Base on this distance we can then calculate the species suitability to the environment (the combination of our multidimensional space).
-
-### Load the species spatial data
+### b. Load/Get the spatial data for the analysis
 
 -   Species records
+  For this working example, we will use presence data for the European pine vole (*Microtus subterraneus*). We collected this data directly from [**GBIF**](https://www.gbif.org/) and can be found in the `Records` folder along with the data provided in this repository.
 
 ```{r Species records, message=F,warning=F,echo=T}
 # a. Species points----
   sf_use_s2(FALSE)
   Species_list <- list.files("./Data/Sp_info/Records",pattern = "Microtus subterraneus.csv",full.names = TRUE)
+  
+  # Load the CSV file with the records
   presence_dat <- Species_list %>% read.csv()
   
+  # Transform the csv into an spatial object
   Sp_points <- presence_dat %>%   st_as_sf(coords=c("decimalLongitude","decimalLatitude"))
   Sp_points[,c(1:5)] %>% head()
   
-```  
+```
 
 -   Species ranges
+
+    Species ranges, obtained from the (**IUCN Red List**)[<https://www.iucnredlist.org/>], are a good way to define the spatial extent of our study area, clean unwanted spatial records, and study the spatial niche of the target species
 
 ```{r SPecies ranges, message=F,warning=F,echo=T}
 # b. Species spatial information----
@@ -78,8 +90,9 @@ ENFA is a presence only method that analyze the multidimensional space form by t
   worldPol <- geodata::world(resolution = 5,path="./Data/Study_area") %>%   st_as_sf() %>% st_make_valid()
 ```
 
-- Configure the study area: the Environmental Niche Factor Analysis is based on the analysis of the multidimensional space form by the combination of environmental information covered by the species and that of our region of study. Therefore the distribution and size of our study area have an impact on the final results of the ENFA analysis.
-  We are going to select all the countries that are in reach of our species range as our study area. To account for spatial bias on the configuration of the IUCN range data, we are going to add a buffer of 100 km (~ 1 degree) around it.
+-   Configure the study area:
+
+    As with any species distribution model (SDM). Therefore, the distribution and size of our study area have an impact on the final results of the ENFA analysis. We are going to select countries that are in reach of our species' range as our study area. To account for spatial bias in the delimitation of the IUCN range data, we will add a buffer of 100 km (\~ 1 degree) around it.
 
 ```{r configure the study area, echo=T, include=F, warning=F, message=F}
   # Select the country geometries that overlap/intersect with the species range
@@ -92,7 +105,7 @@ ENFA is a presence only method that analyze the multidimensional space form by t
   
 ```
 
-```{r plot the study area selection process, echo=F,include=T,warning=F,message=F}
+```{r plot the study area selection process, echo=T,include=T,warning=F,message=F}
 plot(sty_area_united,col="grey88")
 plot(IUCN_ranges %>% st_geometry(),col="tomato",add=T)
 lines(sty_area)
@@ -103,7 +116,8 @@ mtext(side=3,adj=0,"Study area for the ENFA",font=2)
 
 ```
 
-- Load the environmental data
+-   Load the environmental data
+  We are going to download some climatic environmental data using the `geopackage` R-package data. For the modelling of the species niche we selected a set of 19 climatic environmental variables with biological potential. These are described in detail in [**WorldClim**](https://www.worldclim.org/data/bioclim.html).
 
 ```{r Environmental information, echo=T, message=F,warning=F}
 # c. Get the environmental information----
@@ -115,7 +129,7 @@ mtext(side=3,adj=0,"Study area for the ENFA",font=2)
   bio_sty <- crop(bio_w,sty_area %>% st_union() %>% vect())
 ```
 
-- Clean the records
+-   Clean the records
 
 ```{r Remove points outside range, echo=T,message=F,warning=F}
 # d. Remove points outside the IUCN range of the species----  
@@ -127,17 +141,16 @@ mtext(side=3,adj=0,"Study area for the ENFA",font=2)
   
 ```
 
-- Check the spatial data
+-   Check the spatial data
 
-```{r env_data, echo=FALSE}
+```{r env_data, echo=FALSE, include=T}
 par(mar=c(0,0,0,0))
-plot(bio_sty[[c(1:3,21:23)]],axes=F)
+plot(bio_sty[[c(1:3,19)]],axes=F)
 
 ```
 
--  Check the species spatial data
 
-```{r plot the sampling area,include=T}
+```{r plot the sampling area,include=T,echo=F}
 par(mar=c(0,0,0,0))
 # display the information
   plot(sty_area %>% st_geometry(),col="grey95")
@@ -150,9 +163,14 @@ par(mar=c(0,0,0,0))
          pch=15,col=c("grey","black","gold1"),bty="n",xpd=T,cex=0.75)
 ```
 
-# b. extract the data for the presence data
 
-```{r Prepare the observation index, echo=T,include=F}
+### c. Extract the data for the presence data
+
+For the analysis we need to indicate the algorithm which locations (pixels on the rasters) are occupied by the species and which other ones are going to form the environmental background. For this we are going to create a 0 (absence) and 1 (presence) index.
+
+- Prepare a spatial index of presence points 
+
+```{r Prepare the observation index, echo=F,include=T}
 # Create a dataset containing the index of presence points (1) and background environmental information (0)
  pres_index <- rep(0,times=terra::ncell(bio_sty$wc2.1_2.5m_bio_1))
 
@@ -160,27 +178,55 @@ par(mar=c(0,0,0,0))
   obs <- terra::extract(x=bio_sty$wc2.1_2.5m_bio_1, y=Sp_points %>% vect(), cells=T)$cell 
   
   pres_index[obs]<-1
+```
 
-  # Index of missing data
-  index_missing <- !is.na(bio_sty$wc2.1_2.5m_bio_1 %>% terra::values()) %>% as.vector()
-  obs_index <- pres_index[index_missing] # Remove cells with NA values
+- Prepare a spatial index of missing data
 
+  Similar to the presence index, the `ENFA_function` does not accept `NA` values and also does not transform the results into spatial objects. For this reason, before removing the missing values from the environmental information we are going to map the location of it missing values. This index is going to use later on for the translation of the ENFA results into spatial data.
+
+```{r }
   # Prepare environmental data
-  env_dat <- bio_sty %>% terra::as.data.frame()
-  env_dat[index_missing,]
+  env_dat <- bio_sty %>% terra::as.data.frame(na.rm=F)
+  index_missing <- env_dat %>% complete.cases()
+
+  env_dat <- env_dat[index_missing,]
+  pres_index <- pres_index[index_missing]
 ```
 
-# c. Run the ENFA analysis
+### d. Run the ENFA analysis
+Using the `ENFA_function` we are going to perform the Environmental Niche Factor Analysis. This function runs a modified version of the code found in the [`ade4`](https://cran.r-project.org/web/packages/ade4/index.html) R-package. The original version of this function can be found (here)[https://cran.r-project.org/web/packages/ade4/index.html]. The main difference with the `ade4` function is that this functions does not rely on `dudi.pca` for the definition of variable and observations weights, this can be customize using the `col.weights` and `row.weights` arguments. Additionally, this function also returns the habitat suitability based on 1 - chi-square distribution applied to the Mahalanobis distance matrix. On top of this the `ENFA_function` returns:
 
-```{r}
-  ENFA.r <- ENFA_function(data = env_dat,presence_index = obs_index)
-  # ENFA.r
+  a. `marginality`: the marginality values.                  
+  b. `row.weights` & `col.weights`: the observation and variable weights applied to the analysis. By default these are defined by: `rep(1, ncol(data))` & `rep(1, nrow(data))/nrow(data)` for columns and rows respectively.                  
+  d. `presence_index`: the cells in the spatial raster containing species presence information.             e. `marginality_coordiantes`: the loading values of the different environmental variables on the marginality axis.      
+  f. `coordinates_axis`: vector coordinates of the variables on the Marginality Specificity space.          g. `marginality_specificity_vals`: Score values of the Marginality and Specificity axis 
+  h. `niche_centroid_coordinates`: Coordinates on the specificity and Marginality space of the species niche centroid.   
+  i. `prediction`: the Mahalanobis distance to the niche centroid of the environmental space. This distance is calculate over the Marginality and specificity space. By default this is define by the marginality axis (PC1 equivalent) and 2 specificity axis (PC2-3 equivalent).                   
+  j. `Suitability`: the values of habitat suitability calculated based on the Mahalanobis distance.
 
+```{r Run the ENFA function, echo=T}
+  ENFA.r <- ENFA_function(data = env_dat,presence_index = pres_index)
 ```
 
-- Transform the results into rasters
+- Check some of the function outputs
 
-```{r transform ENFA}
+```{r Niche centroid, echo=T,include=T}
+# Niche centroid
+ENFA.r$niche_centroid_coordinates
+```
+
+```{r Check the ENFA function results, echo=T,include=T}
+# Marginality values
+head(ENFA.r$marginality_specificity_vals)
+```
+```{r Axes coordinates, echo=T,include=T}
+# Axes coordinates
+head(ENFA.r$coordinates_axis)
+```
+
+-   Transform the results into spatial objects (rasters)
+
+```{r transform ENFA into spatial objects}
 # Transform the ENFA_results into rasters for the export
   empty_rast <- bio_sty$wc2.1_2.5m_bio_1 ; empty_rast[!is.na(empty_rast)] <- NA
 
@@ -204,47 +250,54 @@ par(mar=c(0,0,0,0))
   ENFA_rast <- c(maha,Marginality,Specialization, Suitability) ; names(ENFA_rast) <- c("Mahalanobis_dist","Marginality","Specificity", "Suitability")
 ```
 
-## d. Main ENFA parameters
+```{r display the ENFA results,echo=F,include=T,warning=F,message=F}
+# Create a mask to overlap on the raster information
+mask_pol <- st_bbox(sty_area_united) %>% st_as_sfc()
+mask_pol <- st_difference(mask_pol,IUCN_ranges %>% st_union()) #%>% plot(col="blue")
 
-- Niche centroid
 
-```{r ENFA results1}
-# c. Exploratory analysis of the species niche
-  ENFA.r$niche_centroid_coordinates
+par(mfrow=c(2,2))
+  plot(ENFA_rast$Mahalanobis_dist %>% log(),main="log(Mahalanobis_dist)",cex=0.75)
+  plot(mask_pol,col="white" %>% adjustcolor(alpha.f = 0.5),border=NA,add=T)
+  
+  plot(ENFA_rast$Marginality,col=viridis::inferno(500),main="Marginality",cex=0.75)
+  plot(mask_pol,col="white" %>% adjustcolor(alpha.f = 0.5),border=NA,add=T)
+  
+  plot(ENFA_rast$Specificity,col=viridis::mako(500),main="Specificity",cex=0.75)
+  plot(mask_pol,col="white" %>% adjustcolor(alpha.f = 0.5),border=NA,add=T)
+  
+  plot(ENFA_rast$Suitability,col=viridis::plasma(500),main="Suitability",cex=0.75)
+  plot(mask_pol,col="white" %>% adjustcolor(alpha.f = 0.5),border=NA,add=T)
 
 ```
 
-Marginality loadings for the variables
+## d. Retrive niche overlap and other ENFA related metrics
 
-```{r ENFA results2}
-  ENFA.r$marginality_coordiantes # Marginality coordinates
+-   Using the `plot_enfa` function we can extract niche overlap
 
-```
-
-# e. Get the extra parameters from the ENFA analysis and calculate niche suitability
-
-```{r display the results}
+```{r get the niche overlap using the Plot_enfa function,echo=T,include=T,message=F,warning=F}
 # b. Get the rest of the ENFA parameters----
-  par(mfrow=c(1,2))
+  par(mfrow=c(1,1))
   ENFA_extra<- plot_enfa(mar=ENFA.r$marginality_specificity_vals$Marginality, # Marginality vector
                        spc=ENFA.r$marginality_specificity_vals$Specialization1, # Specialization vector
                        m=ENFA.r$niche_centroid_coordinates, # Niche centroid
-                       sp_rec=obs_index, # Species records index
+                       sp_rec=pres_index, # Species records index
                        plot_sp=T, # should we plot the results
                        pts=FALSE)
-  
-# c. display the results and calculate the niche suitability  
-  plot(ENFA_rast$Mahalanobis_dist %>% log1p(),col=viridis::inferno(n=200) %>% rev(),axes=F,main="Distance to\nniche centroid",cex=0.75)
-  plot(sty_area_united %>% st_geometry(),add=T)
-  plot(IUCN_ranges %>% st_geometry(),border="white",lty=4,add=T)
-  
 ```
+- Multyvariable space areas and niche overlap
 
-```{r ENFA rast, echo=FALSE}
-layout(matrix(c(1,2,3,4),nrow=2,ncol=2))
-plot(ENFA_rast$Mahalanobis_dist %>% log1p(),col=viridis::inferno(n=200) %>% rev(),axes=F,main="Niche distance")
-plot(ENFA_rast$Marginality,col=viridis::mako(n=200) %>% rev(),axes=F,main="Marginality")
-plot(ENFA_rast$Specificity,col=viridis::viridis(n=200) %>% rev(),axes=F,main="Specificity")
-plot(ENFA_rast$Suitability,col=viridis::turbo(n=200),axes=F,main="Suitability")
+```{r ENFA rast, echo=T}
+# Total area and niche area
+ENFA_extra$areas
 
+# % of niche overlap
+ENFA_extra$prop.overlap
+```
+-   Export the session information for this tutorial
+
+```{r Get and expor the session info, echo=F,include=T,message=F,warning=F}
+dir.create(paste(getwd(),"Session_info",sep="/"),showWarnings = FALSE,recursive = T)
+writeLines(capture.output(sessionInfo()), paste(getwd(),"Session_info","sessionInfo.txt",sep="/"))
+saveRDS(capture.output(sessionInfo()), paste(getwd(),"Session_info","sessionInfo.RDS",sep="/"))
 ```
