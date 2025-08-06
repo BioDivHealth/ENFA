@@ -1,5 +1,5 @@
 ---
-title: |
+title:
   Environmental Niche Factor Analysis
    - Species niche analysis and suitability maps
 author: "Gonzalo Albaladejo-Robles"
@@ -18,9 +18,9 @@ ENFA is a presence only method that analyze the multidimensional space form by t
 
 Base on this distance we can describe the overall level of species niche spatial cover, specialization, and overall habitat suitability.
 
-## Run the analysis using the `ENFA_function`
+### Run the analysis using the `ENFA_function`
 
-### a. Prepare the working environment
+#### a. Prepare the working environment
 
 ```{r General project Options, echo=F, include=F}
 rm(list=ls())
@@ -58,7 +58,7 @@ rm(list.of.packages,new.packages)
 
 ```
 
-### b. Load/Get the spatial data for the analysis
+#### b. Load/Get the spatial data for the analysis
 
 -   Species records
   For this working example, we will use presence data for the European pine vole (*Microtus subterraneus*). We collected this data directly from [**GBIF**](https://www.gbif.org/) and can be found in the `Records` folder along with the data provided in this repository.
@@ -164,7 +164,7 @@ par(mar=c(0,0,0,0))
 ```
 
 
-### c. Extract the data for the presence data
+#### c. Extract the data for the presence data
 
 For the analysis we need to indicate the algorithm which locations (pixels on the rasters) are occupied by the species and which other ones are going to form the environmental background. For this we are going to create a 0 (absence) and 1 (presence) index.
 
@@ -193,7 +193,7 @@ For the analysis we need to indicate the algorithm which locations (pixels on th
   pres_index <- pres_index[index_missing]
 ```
 
-### d. Run the ENFA analysis
+#### d. Run the ENFA analysis
 Using the `ENFA_function` we are going to perform the Environmental Niche Factor Analysis. This function runs a modified version of the code found in the [`ade4`](https://cran.r-project.org/web/packages/ade4/index.html) R-package. The original version of this function can be found (here)[https://cran.r-project.org/web/packages/ade4/index.html]. The main difference with the `ade4` function is that this functions does not rely on `dudi.pca` for the definition of variable and observations weights, this can be customize using the `col.weights` and `row.weights` arguments. Additionally, this function also returns the habitat suitability based on 1 - chi-square distribution applied to the Mahalanobis distance matrix. On top of this the `ENFA_function` returns:
 
   a. `marginality`: the marginality values.                  
@@ -224,7 +224,7 @@ head(ENFA.r$marginality_specificity_vals)
 head(ENFA.r$coordinates_axis)
 ```
 
--   Transform the results into spatial objects (rasters)
+- Transform the results into spatial objects (rasters)
 
 ```{r transform ENFA into spatial objects}
 # Transform the ENFA_results into rasters for the export
@@ -271,9 +271,9 @@ par(mfrow=c(2,2))
 
 ```
 
-## d. Retrive niche overlap and other ENFA related metrics
+#### d. Retrive niche overlap and other ENFA related metrics
 
--   Using the `plot_enfa` function we can extract niche overlap
+- Using the `plot_enfa` function we can extract niche overlap
 
 ```{r get the niche overlap using the Plot_enfa function,echo=T,include=T,message=F,warning=F}
 # b. Get the rest of the ENFA parameters----
@@ -294,7 +294,7 @@ ENFA_extra$areas
 # % of niche overlap
 ENFA_extra$prop.overlap
 ```
--   Export the session information for this tutorial
+- Export the session information for this tutorial
 
 ```{r Get and expor the session info, echo=F,include=T,message=F,warning=F}
 dir.create(paste(getwd(),"Session_info",sep="/"),showWarnings = FALSE,recursive = T)
