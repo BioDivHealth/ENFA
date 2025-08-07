@@ -86,13 +86,13 @@ In this implementation, **suitability** is derived using the **inverse of the ch
   # conflicts_prefer(dplyr::filter)
   rm(list.of.packages,new.packages)
 
-# 1. Connect to the AutoMaxent GitHub repository
+# 1. Connect to the ENFA GitHub repository
   git_hub <- "https://api.github.com/repos/BioDivHealth/ENFA/git/trees/main?recursive=1"
-  MaxRepo <- GET(git_hub) # Extract the repo information
-  MaxRepo
+  ENFARepo <- GET(git_hub) # Extract the repo information
+  ENFARepo
 
 # 2. Get the route to the functions
-  file_path <- data.frame(unlist(lapply(content(MaxRepo)$tree, function(x) x$path)))
+  file_path <- data.frame(unlist(lapply(content(ENFARepo)$tree, function(x) x$path)))
   colnames(file_path) = c('Path')
   head(file_path)
 
