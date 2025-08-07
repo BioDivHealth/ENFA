@@ -93,70 +93,70 @@ plot_enfa<-function(mar, # Marginality vector
 #######################################
 # Function to evaluate ENFA results   #----
 #######################################
-#
-# performance_ENFA<-function(EnFa_p, # model to test
-#                           index_vals, # index of presence and absence data
-#                           threshold_dist = 100 # number of classes at which to evaluate the distance accuracy
-# ){
-  
-#  y.acc<-data.frame(test=NA)
-#  threshold_seq <- seq(from=range(EnFa_p)[1],to=range(EnFa_p)[2],length.out=threshold_dist)
-#  threshold_seq <- threshold_seq[-c(1,length(threshold_seq))]
-  
-  
-#  for(l in 1:length(threshold_seq)){
-    
- #   # Create confusion matrix
- #   Conf.Mat<-table(predict=ifelse(EnFa_p >= threshold_seq[l], 1, 0),
-                    real=index_vals)
-    
- #   if(nrow(Conf.Mat)<2){
-      
- #     A<-list(Accuracy=NA,
- #             TypeI=NA,
- #             TypeII=NA,
- #             TNR=NA,
- #             TPR=NA,
- #             kappa=NA)
-      
- #     b <- A %>% unlist() %>% as.data.frame() 
- #     b$test<- names(A)
-      
- #     y.acc <- merge(y.acc,b,by="test",all=TRUE) ; colnames(y.acc)[ncol(y.acc)] <- threshold_seq[l]
- #     next()
- #   }
-    
- #   Tn<-Conf.Mat[1,1] ; Fn<-Conf.Mat[1,2]
- #   Fp<-Conf.Mat[2,1] ; Tp<-Conf.Mat[2,2]
-    
-    
- #   A<-list(Accuracy=(Tn+Tp)/(Tn+Tp+Fp+Fn),
- #           TypeI=(Fp)/(Tn+Tp+Fp+Fn),
- #           TypeII=(Fn)/(Tn+Tp+Fp+Fn),
- #           TNR=(Tn)/(Tn+Fp),
- #           TPR=(Tp)/(Tp+Fn),
- #           kappa=(2*(Tp*Tn-Fn*Fp))/((Tp+Fp)*(Fp+Tn)+(Tp+Fn)*(Fn+Tn))
- #   )
-    
- #   b <- A %>% unlist() %>% as.data.frame() 
- #   b$test<- names(A)
-    
- #   y.acc <- merge(y.acc,b,by="test",all=TRUE) ; colnames(y.acc)[ncol(y.acc)] <- threshold_seq[l]
-    
- #   #rm(A,b)
- # }
-  
- # if(length(y.acc)<2){
- #   print("No performance information for the Model")
- #   return(NULL)
- # }else{
- #   y.acc<-y.acc[!is.na(y.acc$test),] ; rownames(y.acc)<-y.acc$test
- #   y.acc<-y.acc[,-1] %>% as.matrix()
- #   threshold_seq %in% as.numeric(colnames(y.acc))
-    
-    
- #   return(list(accuracy=y.acc,dist_vals=threshold_seq))
- # }
- #  }
+# 
+#  performance_ENFA<-function(EnFa_p, # model to test
+#                            index_vals, # index of presence and absence data
+#                            threshold_dist = 100 # number of classes at which to evaluate the distance accuracy
+#  ){
+#   
+#   y.acc<-data.frame(test=NA)
+#   threshold_seq <- seq(from=range(EnFa_p)[1],to=range(EnFa_p)[2],length.out=threshold_dist)
+#   threshold_seq <- threshold_seq[-c(1,length(threshold_seq))]
+#   
+#   
+#   for(l in 1:length(threshold_seq)){
+#     
+#    # Create confusion matrix
+#    Conf.Mat<-table(predict=ifelse(EnFa_p >= threshold_seq[l], 1, 0),
+#                     real=index_vals)
+#     
+#     if(nrow(Conf.Mat)<2){
+#       
+#       A<-list(Accuracy=NA,
+#               TypeI=NA,
+#               TypeII=NA,
+#               TNR=NA,
+#               TPR=NA,
+#               kappa=NA)
+#       
+#       b <- A %>% unlist() %>% as.data.frame() 
+#       b$test<- names(A)
+#       
+#       y.acc <- merge(y.acc,b,by="test",all=TRUE) ; colnames(y.acc)[ncol(y.acc)] <- threshold_seq[l]
+#       next()
+#     }
+#     
+#     Tn<-Conf.Mat[1,1] ; Fn<-Conf.Mat[1,2]
+#     Fp<-Conf.Mat[2,1] ; Tp<-Conf.Mat[2,2]
+#     
+#     
+#     A<-list(Accuracy=(Tn+Tp)/(Tn+Tp+Fp+Fn),
+#             TypeI=(Fp)/(Tn+Tp+Fp+Fn),
+#             TypeII=(Fn)/(Tn+Tp+Fp+Fn),
+#             TNR=(Tn)/(Tn+Fp),
+#             TPR=(Tp)/(Tp+Fn),
+#             kappa=(2*(Tp*Tn-Fn*Fp))/((Tp+Fp)*(Fp+Tn)+(Tp+Fn)*(Fn+Tn))
+#     )
+#     
+#     b <- A %>% unlist() %>% as.data.frame() 
+#     b$test<- names(A)
+#     
+#     y.acc <- merge(y.acc,b,by="test",all=TRUE) ; colnames(y.acc)[ncol(y.acc)] <- threshold_seq[l]
+#     
+#     #rm(A,b)
+#   }
+#   
+#   if(length(y.acc)<2){
+#     print("No performance information for the Model")
+#     return(NULL)
+#   }else{
+#     y.acc<-y.acc[!is.na(y.acc$test),] ; rownames(y.acc)<-y.acc$test
+#     y.acc<-y.acc[,-1] %>% as.matrix()
+#     threshold_seq %in% as.numeric(colnames(y.acc))
+#     
+#     
+#     return(list(accuracy=y.acc,dist_vals=threshold_seq))
+#   }
+#    }
 
 # End of the function
